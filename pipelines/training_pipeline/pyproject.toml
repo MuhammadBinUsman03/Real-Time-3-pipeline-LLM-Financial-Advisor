@@ -1,0 +1,47 @@
+[tool.poetry]
+name = "training_pipeline"
+version = "0.1.0"
+description = ""
+authors = ["Muhammad Bin Usman <muhammadbin.2003@gmail.com>"]
+readme = "README.md"
+
+
+[tool.poetry.dependencies]
+python = ">=3.10,<3.11"
+bitsandbytes = "0.43.3"
+transformers = "^4.40.0"
+peft = "^0.4.0"
+accelerate = "^0.33.0"
+datasets = "^2.20.0"
+trl = "^0.9.6"
+wandb = "0.17.6"
+python-dotenv = "^1.0.0"
+scipy = "^1.11.1"
+einops = "^0.6.1"
+beam-sdk = "0.15.9"
+psutil = "^5.9.5"
+torch = "2.1.0"
+fire = "^0.5.0"
+comet-llm = "^1.1.0"
+sentencepiece = "0.2.0"
+unstructured = "^0.10.28"
+
+
+[tool.poetry.group.dev]
+optional = true
+
+[tool.poetry.group.dev.dependencies]
+ipykernel = "^6.25.0"
+notebook = "^7.0.1"
+ruff = "^0.0.284"
+black = "^23.7.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
