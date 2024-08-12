@@ -2,7 +2,6 @@ from pathlib import Path
 
 import fire
 from beam import App, Image, Output, Runtime, Volume, VolumeType
-
 from training_pipeline import configs
 
 inference_app = App(
@@ -44,7 +43,6 @@ def infer(
         logging_config_path (str, optional): Path to the logging configuration file. Defaults to "logging.yaml".
         model_cache_dir (str, optional): Path to the directory where the trained model is cached. Defaults to None.
     """
-
     import logging
 
     from training_pipeline import initialize

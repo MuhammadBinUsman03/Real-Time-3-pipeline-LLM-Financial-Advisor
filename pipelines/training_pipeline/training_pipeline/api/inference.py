@@ -4,7 +4,7 @@ import time
 from pathlib import Path
 from typing import Optional, Tuple
 
-
+from wandb.sdk.data_types.trace_tree import Trace
 from datasets import Dataset
 from peft import PeftConfig
 from tqdm import tqdm
@@ -148,7 +148,6 @@ class InferenceAPI:
         model, tokenizer, peft_config = models.build_qlora_model(
             pretrained_model_name_or_path=self._model_id,
             peft_pretrained_model_name_or_path=self._peft_model_id,
-            gradient_checkpointing=False,
             cache_dir=self._model_cache_dir,
         )
         model.eval()
@@ -179,11 +178,33 @@ class InferenceAPI:
             return_only_answer=True,
         )
         end_time = time.time()
-        duration_milliseconds = (end_time - start_time) * 1000
+        # duration_milliseconds = (end_time - start_time) * 1000
 
-        if not self._debug:
-            # Prompt monitoring
-            pass
+        if self._debug:
+            
+            logger.info(f"Logging prompts to WandB")
+            # create a span in wandb
+            root_span = Trace(
+                name="root_span",
+                kind="llm",
+                status_code="SUCCESS",
+                status_message=(None, ),
+                metadata={
+                    "usage.prompt_tokens": len(infer_prompt),
+                    "usage.total_tokens": len(infer_prompt) + len(answer),
+                    "usage.max_new_tokens": self._max_new_tokens,
+                    "usage.actual_new_tokens": len(answer),
+                    "model": self._model_id,
+                    "peft_model": self._peft_model_id,
+                },
+                start_time_ms=int(start_time * 1000),
+                end_time_ms=int(end_time * 1000),
+                inputs={"prompt": infer_prompt},
+                outputs={"response": answer},
+            )
+        
+            # log the span to wandb
+            root_span.log(name="Financial_trace")
 
         return answer
 
@@ -206,7 +227,6 @@ class InferenceAPI:
             answer = self.infer(
                 infer_prompt=sample["prompt"], infer_payload=sample["payload"]
             )
-
             if should_save_output:
                 prompt_and_answers.append(
                     {

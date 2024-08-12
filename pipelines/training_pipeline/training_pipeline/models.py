@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Optional, Tuple
 
 import torch
-from comet_ml import API
+import wandb
 from peft import LoraConfig, PeftConfig, PeftModel, prepare_model_for_kbit_training, get_peft_model
 from transformers import (
     AutoModelForCausalLM,
@@ -41,25 +41,17 @@ def build_qlora_model(
             and PeftConfig.
     """
 
-    bnb_config = BitsAndBytesConfig(
-        load_in_4bit= True,
-        bnb_4bit_compute_dtype= torch.float16,
-        bnb_4bit_use_double_quant= False,
-    )
-
-    model = AutoModelForCausalLM.from_pretrained(
-        pretrained_model_name_or_path,
-        quantization_config=bnb_config,
-        device_map={"": 0}
-    )
-    model = prepare_model_for_kbit_training(model)
-    model.config.use_cache = False # silence the warnings. Please re-enable for inference!
 
     tokenizer = AutoTokenizer.from_pretrained(pretrained_model_name_or_path, trust_remote_code=True)
     tokenizer.pad_token = tokenizer.eos_token
     tokenizer.padding_side = 'right'
 
     if peft_pretrained_model_name_or_path:
+        model = AutoModelForCausalLM.from_pretrained(
+            pretrained_model_name_or_path,
+            load_in_4bit=True,
+            device_map={"": 0}
+        )
         is_model_name = not os.path.isdir(peft_pretrained_model_name_or_path)
         if is_model_name:
             logger.info(
@@ -79,7 +71,22 @@ def build_qlora_model(
 
         logger.info(f"Loading Peft Model from: {peft_pretrained_model_name_or_path}")
         model = PeftModel.from_pretrained(model, peft_pretrained_model_name_or_path)
+        # model = model.merge_and_unload() #Merged Model
+
     else:
+        bnb_config = BitsAndBytesConfig(
+            load_in_4bit= True,
+            bnb_4bit_compute_dtype= torch.float16,
+            bnb_4bit_use_double_quant= False,
+        )
+
+        model = AutoModelForCausalLM.from_pretrained(
+            pretrained_model_name_or_path,
+            quantization_config=bnb_config,
+            device_map={"": 0}
+        )
+        model = prepare_model_for_kbit_training(model)
+        model.config.use_cache = False # silence the warnings. Please re-enable for inference!
         lora_config = LoraConfig(
             lora_alpha=8,
             lora_dropout= 0.05,
@@ -94,7 +101,7 @@ def build_qlora_model(
 
 def download_from_model_registry(model_id: str, cache_dir: Optional[Path] = None):
     """
-    Downloads a model from the Comet ML Learning model registry.
+    Downloads a model from the WandB model registry.
 
     Args:
         model_id (str): The ID of the model to download, in the format "workspace/model_name:version".
@@ -111,23 +118,22 @@ def download_from_model_registry(model_id: str, cache_dir: Optional[Path] = None
 
     already_downloaded = output_folder.exists()
     if not already_downloaded:
-        workspace, model_id = model_id.split("/")
-        model_name, version = model_id.split(":")
-
-        api = API()
-        model = api.get_model(workspace=workspace, model_name=model_name)
-        model.download(version=version, output_folder=output_folder, expand=True)
+        
+        wandb.init(project=os.environ["WANDB_PROJECT"], entity=os.environ["WANDB_ENTITY"], job_type="training")
+        best_model = wandb.use_artifact(model_id)
+        output_folder = best_model.download()
+        
     else:
         logger.info(f"Model {model_id=} already downloaded to: {output_folder}")
-
-    subdirs = [d for d in output_folder.iterdir() if d.is_dir()]
-    if len(subdirs) == 1:
-        model_dir = subdirs[0]
-    else:
-        raise RuntimeError(
-            f"There should be only one directory inside the model folder. \
-                Check the downloaded model at: {output_folder}"
-        )
+    model_dir = Path(output_folder)
+    # subdirs = [d for d in output_folder.iterdir() if d.is_dir()]
+    # if len(subdirs) == 1:
+    #     model_dir = subdirs[0]
+    # else:
+    #     raise RuntimeError(
+    #         f"There should be only one directory inside the model folder. \
+    #             Check the downloaded model at: {output_folder}"
+    #     )
 
     logger.info(f"Model {model_id=} downloaded from the registry to: {model_dir}")
 

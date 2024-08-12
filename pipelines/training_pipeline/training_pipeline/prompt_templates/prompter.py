@@ -108,3 +108,16 @@ register_llm_template(
         eos="<|endoftext|>",
     )
 )
+register_llm_template(
+    PromptTemplate(
+        name="mistral",
+        system_template=">>INTRODUCTION<< {system_message}",
+        system_message="You are a helpful assistant, with financial expertise.",
+        context_template=">>DOMAIN<< {user_context}\n{news_context}",
+        chat_history_template=">>SUMMARY<< {chat_history}",
+        question_template=">>QUESTION<< {question}",
+        answer_template=">>ANSWER<< {answer}",
+        sep="\n",
+        eos="<|im_end|>",
+    )
+)
