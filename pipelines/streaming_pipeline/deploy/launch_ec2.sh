@@ -1,5 +1,5 @@
 #!/bin/bash
-
+sudo apt-get install -y gettext
 # Get the default VPC ID
 DEFAULT_VPC_ID=$(aws ec2 describe-vpcs --query 'Vpcs[?IsDefault==`true`].VpcId | [0]' --output text)
 
@@ -7,7 +7,7 @@ DEFAULT_VPC_ID=$(aws ec2 describe-vpcs --query 'Vpcs[?IsDefault==`true`].VpcId |
 DEFAULT_SUBNET_ID=$(aws ec2 describe-subnets --filters "Name=vpc-id,Values=$DEFAULT_VPC_ID" --query 'Subnets[0].SubnetId' --output text)
 
 # Define EC2 AMI Image ID
-AMI_IMAGE="ami-04e601abe3e1a910f"
+AMI_IMAGE="ami-04a81a99f5ec58529"
 
 # Define EC2 IAM Role variables
 ROLE_NAME="EC2_ECR_Access_Role"
@@ -34,7 +34,7 @@ else
   exit 1
 fi
 
-
+sudo apt-get install -y jq
 # Create Security Group.
 SECURITY_GROUP_ID=$(aws ec2 create-security-group \
     --group-name 'hands-on-llms-sg' \
@@ -43,7 +43,7 @@ SECURITY_GROUP_ID=$(aws ec2 create-security-group \
     --vpc-id $DEFAULT_VPC_ID | jq -r '.GroupId') 
 
 echo "Created Security Group with ID: $SECURITY_GROUP_ID"
-
+export AWS_PAGER=""
 # The output will provide a Security Group ID, make note of it for the next steps
 aws ec2 authorize-security-group-ingress --group-id ${SECURITY_GROUP_ID} --protocol tcp --port 22 --cidr 0.0.0.0/0
 aws ec2 authorize-security-group-ingress --group-id ${SECURITY_GROUP_ID} --protocol tcp --port 80 --cidr 0.0.0.0/0

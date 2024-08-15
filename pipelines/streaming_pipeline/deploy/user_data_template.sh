@@ -23,8 +23,11 @@ sudo systemctl start docker
 sudo systemctl enable docker
 
 # Install AWS CLI.
-sudo apt update
-sudo apt install awscli -y
+sudo apt-get update
+sudo apt-get install -y zip
+curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+unzip awscliv2.zip
+sudo ./aws/install
 
 # Sleep for 90 seconds to allow the instance to fully initialize.
 echo "Sleeping for 90 seconds to allow the instance to fully initialize..."

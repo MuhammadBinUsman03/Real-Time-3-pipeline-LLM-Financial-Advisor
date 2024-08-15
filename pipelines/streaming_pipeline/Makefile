@@ -77,8 +77,9 @@ run_docker_dev:
 deploy_aws:
 	chmod +x deploy/create_user_data.sh
 	chmod +x deploy/launch_ec2.sh 
-
 	dos2unix deploy/launch_ec2.sh
+	dos2unix deploy/create_user_data.sh
+	bash deploy/launch_ec2.sh
 
 info_aws:
 	aws ec2 describe-instances --filters "Name=tag:Name,Values=streaming-pipeline-server"
@@ -87,7 +88,12 @@ undeploy_aws:
 	sudo apt-get update
 	sudo apt-get install dos2unix
 	dos2unix deploy/terminate_ec2.sh
-	# bash deploy/terminate_ec2.sh
+
+	aws configure set aws_access_key_id $ACCESS_KEY
+	aws configure set aws_secret_access_key $SECRET_ACCESS_KEY
+	aws configure set region $AWS_REGION
+
+	bash deploy/terminate_ec2.sh
 
 
 ### PEP 8 ###

@@ -19,7 +19,7 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v1
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -63,7 +63,7 @@ jobs:
       run: sudo apt-get update && sudo apt-get install -y make
 
     - name: Configure AWS Credentials
-      uses: aws-actions/configure-aws-credentials@v1
+      uses: aws-actions/configure-aws-credentials@v4
       with:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -85,3 +85,6 @@ jobs:
         QDRANT_URL: ${{ secrets.QDRANT_URL }}
         AWS_REGION: ${{ secrets.AWS_REGION }}
         AWS_ECR_REPO_NAME: ${{ env.REPOSITORY_NAME }}
+        AWS_PROFILE: ${{ secrets.AWS_PROFILE }}
+        ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY_ID }}
