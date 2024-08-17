@@ -79,6 +79,7 @@ deploy_aws:
 	chmod +x deploy/launch_ec2.sh 
 	dos2unix deploy/launch_ec2.sh
 	dos2unix deploy/create_user_data.sh
+	dos2unix deploy/entrypoint.sh
 	bash deploy/launch_ec2.sh
 
 info_aws:

@@ -30,13 +30,14 @@ def initialize(logging_config_path: str = "logging.yaml", env_file_path: str = "
         )
         logging.basicConfig(level=logging.INFO)
 
-    logger.info("Initializing env vars...")
-    if env_file_path is None:
-        env_file_path = find_dotenv(raise_error_if_not_found=False, usecwd=False)
+    # commented for CD pipeline
+    # logger.info("Initializing env vars...")
+    # if env_file_path is None:
+    #     env_file_path = find_dotenv(raise_error_if_not_found=False, usecwd=False)
 
-    if env_file_path is not None:
-        logger.info(f"Loading environment variables from: {env_file_path}")
-        load_dotenv(env_file_path, verbose=True, override=True)
+    # if env_file_path is not None:
+    #     logger.info(f"Loading environment variables from: {env_file_path}")
+    #     load_dotenv(env_file_path, verbose=True, override=True)
 
 
 def initialize_logger(
