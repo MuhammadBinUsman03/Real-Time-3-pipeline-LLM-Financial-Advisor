@@ -6,6 +6,7 @@ from qdrant_client import QdrantClient
 from qdrant_client.http.api_client import UnexpectedResponse
 from qdrant_client.http.models import Distance, VectorParams
 from qdrant_client.models import PointStruct
+from qdrant_client import models
 
 from streaming_pipeline import constants
 from streaming_pipeline.models import Document
@@ -38,14 +39,11 @@ class QdrantVectorOutput(DynamicOutput):
         else:
             self.client = build_qdrant_client()
 
-        try:
-            self.client.get_collection(collection_name=self._collection_name)
-        except (UnexpectedResponse, ValueError):
-            self.client.recreate_collection(
-                collection_name=self._collection_name,
-                vectors_config=VectorParams(
-                    size=self._vector_size, distance=Distance.COSINE
-                ),
+        exists = self.client.collection_exists(collection_name=self._collection_name)
+        if not exists:
+            self.client.create_collection(
+            collection_name= self._collection_name,
+            vectors_config=models.VectorParams(size=constants.EMBEDDING_MODEL_MAX_INPUT_LENGTH, distance=models.Distance.COSINE),
             )
 
     def build(self, worker_index, worker_count):

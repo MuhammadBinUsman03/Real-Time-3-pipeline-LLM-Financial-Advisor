@@ -5,7 +5,6 @@ from fire import Fire
 from streaming_pipeline import constants, initialize
 from streaming_pipeline.embeddings import EmbeddingModelSingleton
 from streaming_pipeline.qdrant import build_qdrant_client
-from qdrant_client import models
 
 logger = logging.getLogger(__name__)
 
@@ -24,10 +23,6 @@ def search(query_string: str):
     initialize()
 
     client = build_qdrant_client()
-    client.create_collection(
-    collection_name=constants.VECTOR_DB_OUTPUT_COLLECTION_NAME,
-    vectors_config=models.VectorParams(size=constants.EMBEDDING_MODEL_MAX_INPUT_LENGTH, distance=models.Distance.COSINE),
-    )
     model = EmbeddingModelSingleton()
 
     query_embedding = model(query_string, to_list=True)
