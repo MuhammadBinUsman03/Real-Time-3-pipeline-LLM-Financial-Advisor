@@ -1,4 +1,3 @@
-
 # Install 
 ## Dependencies
 
@@ -37,6 +36,32 @@ For debugging & testing, run the bot locally with a predefined question, while m
 ```shell
 make run_dev
 ```
+
+## Model Caching
+
+The inference pipeline now includes an efficient model caching system that:
+
+1. Maintains loaded models in memory using an LRU (Least Recently Used) caching strategy
+2. Automatically manages memory usage by unloading least recently used models when memory pressure is high
+3. Provides model preloading for frequently used models to reduce initial inference latency
+4. Implements thread-safe access to models for concurrent requests
+
+To test the model caching functionality:
+```shell
+python test_model_caching.py
+```
+
+This will demonstrate how subsequent model loads are much faster due to the caching mechanism.
+
+### Configuration
+
+The model caching system can be configured with the following parameters:
+
+- `max_models`: Maximum number of models to keep in memory (default: 3)
+- `memory_check_interval`: How often to check memory pressure in seconds (default: 60)
+- `max_memory_percent`: Maximum memory usage percentage before evicting models (default: 85.0)
+
+These parameters can be adjusted in the `models.py` file based on your hardware capabilities.
 
 ## Beam | RESTful API
 `deploy the financial bot as a RESTful API to Beam` 
