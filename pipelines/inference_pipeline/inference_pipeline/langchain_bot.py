@@ -17,7 +17,7 @@ from inference_pipeline.chains import (
 )
 from inference_pipeline.embeddings import EmbeddingModelSingleton
 from inference_pipeline.handlers import WandbLLMMonitoringHandler
-from inference_pipeline.models import build_huggingface_pipeline
+from inference_pipeline.models import build_huggingface_pipeline, preload_models, get_model_registry_stats
 from inference_pipeline.qdrant import build_qdrant_client
 from inference_pipeline.template import get_llm_template
 
@@ -40,6 +40,7 @@ class FinancialBot:
         streaming (bool): Whether to use the Hugging Face streaming API for inference.
         embedding_model_device (str): The device to use for the embedding model.
         debug (bool): Whether to enable debug mode.
+        preload_default_model (bool): Whether to preload the default model during initialization.
 
     Attributes:
         finbot_chain (Chain): The language chain that generates responses to user inputs.
@@ -58,6 +59,7 @@ class FinancialBot:
         streaming: bool = False,
         embedding_model_device: str = "cuda:0",
         debug: bool = False,
+        preload_default_model: bool = True,
     ):
         self._llm_model_id = llm_model_id
         self._llm_qlora_model_id = llm_qlora_model_id
@@ -68,6 +70,13 @@ class FinancialBot:
         self._vector_collection_name = vector_collection_name
         self._vector_db_search_topk = vector_db_search_topk
         self._debug = debug
+        self._model_cache_dir = model_cache_dir
+
+        # Preload the default model if requested
+        if preload_default_model and not debug:
+            logger.info("Preloading default model for faster first inference")
+            preload_models(cache_dir=model_cache_dir)
+            logger.info(f"Model registry stats after preloading: {get_model_registry_stats()}")
 
         self._qdrant_client = build_qdrant_client()
 
@@ -95,6 +104,11 @@ class FinancialBot:
     @property
     def is_streaming(self) -> bool:
         return self._streamer is not None
+        
+    @property
+    def model_registry_stats(self) -> dict:
+        """Get statistics about the model registry."""
+        return get_model_registry_stats()
 
     def build_chain(self) -> chains.SequentialChain:
         """
@@ -203,6 +217,8 @@ class FinancialBot:
             Short user description.
         question : str
             User question.
+        to_load_history : List[Tuple[str, str]], optional
+            Conversation history to load, by default None
 
         Returns
         -------

@@ -1,7 +1,7 @@
 import logging
 import os
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Callable, Any
 
 import torch
 import wandb
@@ -18,9 +18,17 @@ from transformers import (
 )
 
 from inference_pipeline import constants
+from inference_pipeline.model_registry import ModelRegistryService
 from inference_pipeline.utils import MockedPipeline
 
 logger = logging.getLogger(__name__)
+
+# Global model registry
+_model_registry = ModelRegistryService(
+    max_models=3,  # Adjust based on available GPU memory
+    memory_check_interval=60,  # Check memory every 60 seconds
+    max_memory_percent=85.0  # Unload models if memory usage exceeds 85%
+)
 
 
 def download_from_model_registry(model_id: str, cache_dir: Optional[Path] = None):
@@ -90,6 +98,30 @@ class StopOnTokens(StoppingCriteria):
         return False
 
 
+def _load_model_and_tokenizer(
+    llm_model_id: str,
+    llm_lora_model_id: str,
+    cache_dir: Optional[Path] = None,
+) -> Tuple[Any, Any, Any]:
+    """
+    Helper function to load a model and tokenizer.
+    This is extracted to be used with the model registry.
+    
+    Args:
+        llm_model_id (str): The ID or path of the LLM model.
+        llm_lora_model_id (str): The ID or path of the LLM LoRA model.
+        cache_dir (Optional[Path], optional): The directory to use for caching. Defaults to None.
+        
+    Returns:
+        Tuple[Any, Any, Any]: A tuple containing the model, tokenizer, and lora config.
+    """
+    return build_qlora_model(
+        pretrained_model_name_or_path=llm_model_id,
+        peft_pretrained_model_name_or_path=llm_lora_model_id,
+        cache_dir=cache_dir,
+    )
+
+
 def build_huggingface_pipeline(
     llm_model_id: str,
     llm_lora_model_id: str,
@@ -101,13 +133,13 @@ def build_huggingface_pipeline(
 ) -> Tuple[HuggingFacePipeline, Optional[TextIteratorStreamer]]:
     """
     Builds a HuggingFace pipeline for text generation using a custom LLM + Finetuned checkpoint.
+    Uses the ModelRegistryService to cache models and avoid reloading them.
 
     Args:
         llm_model_id (str): The ID or path of the LLM model.
         llm_lora_model_id (str): The ID or path of the LLM LoRA model.
         max_new_tokens (int, optional): The maximum number of new tokens to generate. Defaults to 128.
         temperature (float, optional): The temperature to use for sampling. Defaults to 0.7.
-        gradient_checkpointing (bool, optional): Whether to use gradient checkpointing. Defaults to False.
         use_streamer (bool, optional): Whether to use a text iterator streamer. Defaults to False.
         cache_dir (Optional[Path], optional): The directory to use for caching. Defaults to None.
         debug (bool, optional): Whether to use a mocked pipeline for debugging. Defaults to False.
@@ -125,11 +157,16 @@ def build_huggingface_pipeline(
             None,
         )
 
-    model, tokenizer, _ = build_qlora_model(
-        pretrained_model_name_or_path=llm_model_id,
-        peft_pretrained_model_name_or_path=llm_lora_model_id,
-        cache_dir=cache_dir,
+    # Create a unique model key based on the model ID and LoRA model ID
+    model_key = f"{llm_model_id}_{llm_lora_model_id}"
+    
+    # Use the model registry to get or load the model
+    model, tokenizer, lora_config = _model_registry.get_model(
+        model_key,
+        lambda: _load_model_and_tokenizer(llm_model_id, llm_lora_model_id, cache_dir)
     )
+    
+    # Ensure model is in evaluation mode
     model.eval()
 
     if use_streamer:
@@ -232,3 +269,35 @@ def build_qlora_model(
         )
 
     return model, tokenizer, lora_config
+
+
+# Function to get model registry stats
+def get_model_registry_stats():
+    """
+    Get statistics about the model registry.
+    
+    Returns:
+        Dict: Dictionary with statistics about the model registry
+    """
+    return _model_registry.get_stats()
+
+
+# Function to preload commonly used models
+def preload_models(cache_dir: Optional[Path] = None):
+    """
+    Preload commonly used models into the model registry.
+    
+    Args:
+        cache_dir (Optional[Path]): The directory to use for caching.
+    """
+    # Preload the default model
+    model_key = f"{constants.LLM_MODEL_ID}_{constants.LLM_QLORA_CHECKPOINT}"
+    _model_registry.preload_model(
+        model_key,
+        lambda: _load_model_and_tokenizer(
+            constants.LLM_MODEL_ID, 
+            constants.LLM_QLORA_CHECKPOINT, 
+            cache_dir
+        )
+    )
+    logger.info(f"Preloaded default model: {model_key}")
